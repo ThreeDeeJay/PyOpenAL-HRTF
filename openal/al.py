@@ -82,6 +82,10 @@ AL_LINEAR_DISTANCE_CLAMPED = 0xD004
 AL_EXPONENT_DISTANCE = 0xD005
 AL_EXPONENT_DISTANCE_CLAMPED = 0xD006
 
+# HRTF related extensions
+AL_STEREO_ANGLES = 0x1030
+
+
 al_enums = {}
 local_items = list(locals().items())
 for k, v in local_items:

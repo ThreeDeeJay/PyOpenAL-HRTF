@@ -577,6 +577,10 @@ class Source:
         self.set(AL_CONE_OUTER_ANGLE, value)
         self.cone_outer_angle = _to_val(value)
 
+    def set_stereo_angles(self, value):
+        self.set(AL_STEREO_ANGLES, value)
+        self.stereo_angles = _to_val(value)
+
     def set_position(self, value):
         """set_position(tuple or list) -> None
         sets the current position of the source.
@@ -593,6 +597,7 @@ class Source:
         default is (0.0, 0.0, 0.0)"""
         self.set(AL_VELOCITY, value)
         self.velocity = _to_val(value)
+
 
     def set_looping(self, value):
         """set_looping(bool) -> None
