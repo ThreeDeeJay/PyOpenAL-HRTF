@@ -21,6 +21,10 @@ or for local user installation, replace the last step with:
 $ python setup.py install --user
 ```
 
+### Usage
+
+See [example](https://github.com/mmxgn/PyOpenAL-HRTF/blob/master/examples/pyalhrtf.py).
+
 
 # PyOpenAL
 
