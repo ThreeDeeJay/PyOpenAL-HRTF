@@ -40,6 +40,21 @@ ALC_CAPTURE_DEVICE_SPECIFIER = 0x310
 ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER = 0x311
 ALC_CAPTURE_SAMPLES = 0x312
 
+# HRTF openal-soft definitions
+ALC_SOFT_HRTF = 1
+ALC_HRTF_SOFT = 0x1992
+ALC_DONT_CARE_SOFT = 0x0002
+ALC_HRTF_STATUS_SOFT = 0x1993
+ALC_HRTF_DISABLED_SOFT = 0x0000
+ALC_HRTF_ENABLED_SOFT = 0x0001
+ALC_HRTF_DENIED_SOFT = 0x0002
+ALC_HRTF_REQUIRED_SOFT = 0x0003
+ALC_HRTF_HEADPHONES_DETECTED_SOFT = 0x0004
+ALC_HRTF_UNSUPPORTED_FORMAT_SOFT = 0x0005
+ALC_NUM_HRTF_SPECIFIERS_SOFT = 0x1994
+ALC_HRTF_SPECIFIER_SOFT = 0x1995
+ALC_HRTF_ID_SOFT = 0x1996
+
 alc_enums = {}
 local_items = list(locals().items())
 for k, v in local_items:
@@ -155,3 +170,17 @@ alcCaptureSamples = lib.alcCaptureSamples
 alcCaptureSamples.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int]
 alcCaptureSamples.restype = None
 alcCaptureSamples.errcheck = alc_check_error
+
+# openal-soft definitions
+alcGetStringiSOFT = lib.alcGetStringiSOFT
+alcGetStringiSOFT.argtypes = [ctypes.c_void_p, ctypes.c_int]
+alcGetStringiSOFT.restype = ctypes.c_char_p
+alcGetStringiSOFT.errcheck = alc_check_error
+
+alcResetDeviceSOFT = lib.alcResetDeviceSOFT
+alcResetDeviceSOFT.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)]
+alcResetDeviceSOFT.restype = ctypes.c_char
+
+
+
+                               
