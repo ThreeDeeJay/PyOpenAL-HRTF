@@ -1,3 +1,27 @@
+# PyOpenAL-HRTF
+
+PyOpenAL-HRTF plans to extend PyOpenAL with the hrtf extensions provided by [kcat/openal-soft](https://github.com/kcat/openal-soft).
+
+## Installation
+
+### Requirements
+
+Openal-soft from [kcat/openal-soft](https://github.com/kcat/openal-soft).
+
+### Linux
+
+```
+$ python setup.py build
+$ python setup.py install
+```
+
+or for local user installation, replace the last step with:
+
+```
+$ python setup.py install --user
+```
+
+
 # PyOpenAL
 
 PyOpenAL provides OpenAL bindings for python as well as an interface to them.
