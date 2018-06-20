@@ -76,6 +76,60 @@ def oalInit(device_specifier=None, context_attr_list=None):
         _err("OpenAL context couldn't be created")
 
     alcMakeContextCurrent(_oalcontext)
+    
+def oalInitHRTF(requested_hrtf=None):
+    
+    global _stereo_angles_ext_supported, _hrtf_enabled
+    
+    if not alc.alcIsExtensionPresent(_oaldevice, b"ALC_SOFT_HRTF"):
+        _err("HRTF extension not present")
+        
+    if al.alIsExtensionPresent(b"AL_EXT_STEREO_ANGLES"):
+        _stereo_angles_ext_supported = True
+    else:
+        _stereo_angles_ext_supported = False
+        
+    # Enumerate available HRTFs, and reset the device using one
+    num_hrtf = ctypes.c_int(0)
+    alc.alcGetIntegerv(_oaldevice, ALC_NUM_HRTF_SPECIFIERS_SOFT, 1, num_hrtf)
+    
+    if num_hrtf.value == 0:
+        _err("No HRTFs found")
+    else:
+        attr = (ctypes.c_int * 5)()
+        
+        index = -1
+        for n in range(num_hrtf.value):
+            hrtfname = alc.alcGetStringiSOFT(_oaldevice, ALC_HRTF_SPECIFIER_SOFT, n).decode("utf-8")    
+            if requested_hrtf == hrtfname:
+                if requested_hrtf == hrtfname:
+                    index = n
+        
+        attr[0] = ALC_HRTF_SOFT
+        attr[1] = ALC_TRUE
+        
+        if index == -1:
+            if requested_hrtf:
+                _err('HRTF "{}" not found'.format(requested_name))
+        else:
+            attr[2] = ALC_HRTF_ID_SOFT
+            attr[3] = index
+            
+        attr[4] = 0
+            
+        if not alc.alcResetDeviceSOFT(_oaldevice, attr):        
+            _err("Failed to reset device: {}".format(alc.alcGetError(_oaldevice, alcGetError(_oaldevice))))       
+            
+        # Check if HRTF is enabled
+        hrtf_state = ctypes.c_int(0)
+        alc.alcGetIntegerv(_oaldevice, ALC_HRTF_SOFT, 1, hrtf_state)
+        if not hrtf_state:
+            _err("Something went wrong, HRTF is still not enabled (check console for errors)")
+            _hrtf_enabled = False
+        else:
+            _hrtf_enabled = True                 
+        
+
 
 def oalGetDevice():
     """oalGetDevice() -> ALCdevice
@@ -578,6 +632,8 @@ class Source:
         self.cone_outer_angle = _to_val(value)
 
     def set_stereo_angles(self, value):
+        if not _stereo_angles_ext_supported:
+            _err("cannot set stereo angles: extension not enabled")
         self.set(AL_STEREO_ANGLES, value)
         self.stereo_angles = _to_val(value)
 
