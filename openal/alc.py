@@ -180,6 +180,7 @@ alcGetStringiSOFT.errcheck = alc_check_error
 alcResetDeviceSOFT = lib.alcResetDeviceSOFT
 alcResetDeviceSOFT.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_int)]
 alcResetDeviceSOFT.restype = ctypes.c_char
+alcResetDeviceSOFT.errcheck = alc_check_error
 
 
 
