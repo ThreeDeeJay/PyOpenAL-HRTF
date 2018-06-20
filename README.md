@@ -6,7 +6,11 @@ PyOpenAL-HRTF plans to extend PyOpenAL with the hrtf extensions provided by [kca
 
 ### Requirements
 
-Openal-soft from [kcat/openal-soft](https://github.com/kcat/openal-soft).
+`openal-soft` from [kcat/openal-soft](https://github.com/kcat/openal-soft).
+
+**For examples:**
+- `numpy`
+- `argparse`
 
 ### Linux
 
