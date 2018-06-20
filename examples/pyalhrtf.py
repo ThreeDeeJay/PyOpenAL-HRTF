@@ -32,6 +32,7 @@ Original (and current) License:
 
 import argparse
 import numpy as np
+import time
 from openal import *
 
 if __name__ == "__main__":
