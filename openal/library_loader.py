@@ -49,10 +49,11 @@ class ExternalLibrary:
         for style in _other_styles:
             candidate = style.format(name)
             library = ctypes.util.find_library(candidate)
-            try:
-                return ctypes.CDLL(library)
-            except:
-                pass
+            if library:
+                try:
+                    return ctypes.CDLL(library)
+                except:
+                    pass
 
     @staticmethod
     def load_windows(name, paths = None):
