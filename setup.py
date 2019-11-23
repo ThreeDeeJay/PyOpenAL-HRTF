@@ -10,6 +10,16 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 
+import sys
+
+platform = None
+
+if (len(sys.argv) == 4):
+    if (sys.argv[3] == "win-amd64"):
+        platform = 64
+    elif (sys.argv[3] == "win32"):
+        platform = 32
+
 here = path.abspath(path.dirname(__file__))
 
 setup(
@@ -18,7 +28,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.7.9a1',
+    version='0.7.10a1',
 
     description='OpenAL integration for Python',
     long_description=open(path.join(here, 'README.md')).read(),
@@ -72,8 +82,8 @@ setup(
 
     package_data={
         # include shared libraries in wheel packages
-        'openal': ['soft_oal.dll']
-    },
+        'openal': ['soft_oal_{}.dll'.format(platform)]
+    } if platform else {},
 
     # List run-time dependencies here.  These will be installed by pip when
     # your project is installed. For an analysis of "install_requires" vs pip's

@@ -51,7 +51,7 @@ class ExternalLibrary:
             library = ctypes.util.find_library(candidate)
             if library:
                 try:
-                    return ctypes.CDLL(library)
+                    return ctypes.CDLL(os.path.realpath(library))
                 except:
                     pass
 
@@ -66,11 +66,11 @@ class ExternalLibrary:
             library = ctypes.util.find_library(candidate)
             if library:
                 try:
-                    return ctypes.CDLL(candidate)
+                    return ctypes.CDLL(os.path.realpath(library))
                 except WindowsError:
                     pass
                 except OSError:
-                    not_supported.append(candidate)
+                    not_supported.append(library)
             
 
         if not_supported:
