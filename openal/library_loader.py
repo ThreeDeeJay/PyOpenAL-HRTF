@@ -51,7 +51,7 @@ class ExternalLibrary:
             library = ctypes.util.find_library(candidate)
             if library:
                 try:
-                    return ctypes.CDLL(os.path.realpath(library))
+                    return ctypes.CDLL(library)
                 except:
                     pass
 

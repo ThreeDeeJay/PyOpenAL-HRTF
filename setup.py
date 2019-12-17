@@ -15,6 +15,7 @@ import sys
 platform = None
 
 if (len(sys.argv) == 4):
+    print(sys.argv)
     if (sys.argv[3] == "win-amd64"):
         platform = 64
     elif (sys.argv[3] == "win32"):
@@ -28,7 +29,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.7.10a1',
+    version='0.7.11a1',
 
     description='OpenAL integration for Python',
     long_description=open(path.join(here, 'README.md')).read(),
