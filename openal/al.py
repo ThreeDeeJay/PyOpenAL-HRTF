@@ -3,18 +3,7 @@ import os
 import ctypes
 import ctypes.util
 
-from .library_loader import ExternalLibrary, ExternalLibraryError
-
-lib = None
-for name in ("openal", "OpenAL32", "soft_oal"):
-    try:
-        lib = ExternalLibrary.load(name)
-    except:
-        continue
-    if lib: break
-
-if not lib:
-    raise ExternalLibraryError("OpenAL library couldn't be found")
+from .al_lib import lib
 
 AL_NONE = 0
 AL_FALSE = 0

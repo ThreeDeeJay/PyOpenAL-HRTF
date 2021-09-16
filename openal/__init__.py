@@ -1,13 +1,13 @@
 from .al import *
 from .alc import *
 
-import ctypes, numpy, warnings
+import ctypes, warnings
 
 import os, sys
 
 try:
     from pyogg import *
-    PYOGG_AVAIL = PYOGG_OGG_AVAIL
+    PYOGG_AVAIL = (PYOGG_OGG_AVAIL and PYOGG_VORBIS_AVAIL and PYOGG_VORBIS_FILE_AVAIL) or (PYOGG_OPUS_AVAIL and PYOGG_OPUS_FILE_AVAIL) or PYOGG_FLAC_AVAIL
 except:
     PYOGG_AVAIL = False
 
@@ -21,6 +21,8 @@ try:
     long
 except:
     long = int
+
+tuple_add3 = lambda a,b: (a[0]+b[0], a[1]+b[1], a[2]+b[2])
 
 OAL_DONT_AUTO_INIT = False
 
@@ -43,7 +45,8 @@ ALenum = ctypes.c_int32
 ALfloat = ctypes.c_float
 ALdouble = ctypes.c_double
 
-_items = []
+_sources = []
+_buffers = []
 
 class OalError(Exception):
     pass
@@ -164,21 +167,23 @@ def _no_pyogg_error(*args, **kw):
     _err("You have to set up pyogg in order to use this function. Go to https://github.com/Zuzu-Typ/PyOgg to get it")
 
 def _to_val(value):
-    if type(value) in (float, bool, numpy.ndarray):
+    if type(value) in (float, bool, tuple):
         return value
-    elif type(value) in (int,):
+    elif type(value) == int:
         return float(value)
-    elif type(value) in (ctypes.c_float*3,):
-        return numpy.array(value)
-    elif type(value) in (ctypes.c_float*6,):
-        return numpy.array(value)
+    elif type(value) == ctypes.c_float*3:
+        return tuple(value)
+    elif type(value) == ctypes.c_float*6:
+        return tuple(value)
     elif type(value) in (ctypes.c_float, ctypes.c_int, ctypes.c_uint):
         return value.value
-    elif type(value) in (tuple, list):
-        if len(value) == 3:
-            return numpy.array(value)
-        elif len(value) == 6:
-            return numpy.array(value)
+    else:
+        try:
+            if len(value) == 3:
+                return tuple(value)
+            elif len(value) == 6:
+                return tuple(value)
+        except: pass
 
 if WAVE_AVAIL:
     class WaveFile:
@@ -189,14 +194,15 @@ if WAVE_AVAIL:
 
             self.frequency = self.file_.getframerate()
             
-            self.buffer = b""
+            temp_buffer = []
 
             change = 1
 
             while change:
                 new_buf = self.file_.readframes(4096*8)
                 change = len(new_buf)
-                self.buffer += new_buf
+                temp_buffer.append(new_buf)
+            self.buffer = b"".join(temp_buffer)
 
             self.buffer_length = len(self.buffer)
 
@@ -221,24 +227,24 @@ if WAVE_AVAIL:
             """get_buffer() -> bytesBuffer, bufferLength"""
             if not self.exists:
                 return None
-            buffer = b""
+            buffer = []
+            buffer_size = 0
             
             while True:
                 new_bytes = self.file_.readframes(WAVE_STREAM_BUFFER_SIZE*self.channels)
                 
-                if buffer:
-                    buffer += new_bytes
-                else:
-                    buffer = new_bytes
+                buffer.append(new_bytes)
+                buffer_size += len(new_bytes)
 
-                if len(new_bytes) == 0 or len(buffer) >= WAVE_STREAM_BUFFER_SIZE*self.channels:
+                if len(new_bytes) == 0 or buffer_size >= WAVE_STREAM_BUFFER_SIZE*self.channels:
                     break
 
             if len(buffer) == 0:
                 self.clean_up()
                 return(None)
 
-            return(buffer, len(buffer))
+            buffer_bytes = b"".join(buffer)
+            return(buffer_bytes, len(buffer_bytes))
 else:
     class WaveFile:
         def __init__(*args, **kw):
@@ -250,9 +256,9 @@ class Listener:
     you can retrieve it with oalGetListener()"""
     def __init__(self):
         self.gain = 0.
-        self.position = numpy.array((0.,0.,0.), dtype=ctypes.c_float)
-        self.orientation = numpy.array((0.,0.,-1.,0.,1.,0.), dtype=ctypes.c_float)
-        self.velocity = numpy.array((0.,0.,0.), dtype=ctypes.c_float)
+        self.position = (0.,0.,0.)
+        self.orientation = (0.,0.,-1.,0.,1.,0.)
+        self.velocity = (0.,0.,0.)
 
     def get(self, enum):
         """get(int enum) -> value
@@ -285,22 +291,23 @@ class Listener:
         which will also update the instance variables (e.g. gain)"""
         if type(value) in (float,):
             alListenerf(ctypes.c_int(enum), ctypes.c_float(value))
-        elif type(value) == numpy.ndarray:
-            alListenerfv(ctypes.c_int(enum), (ctypes.c_float*len(value))(*value))
         elif type(value) in (ctypes.c_float*3, ctypes.c_float*6):
             alListenerfv(ctypes.c_int(enum), value)
-        elif type(value) in (tuple, list):
-            if len(value) == 3:
-                alListenerfv(ctypes.c_int(enum), (ctypes.c_float*3)(*numpy.array(value, dtype=ctypes.c_float)))
-            elif len(value) == 6:
-                alListenerfv(ctypes.c_int(enum), (ctypes.c_float*6)(*numpy.array(value, dtype=ctypes.c_float)))
+        else:
+            try:
+                value = tuple(value)
+                if len(value) == 3:
+                    alListenerfv(ctypes.c_int(enum), (ctypes.c_float*3)(*value))
+                elif len(value) == 6:
+                    alListenerfv(ctypes.c_int(enum), (ctypes.c_float*6)(*value))
+            except: pass
 
     def move(self, vec3):
         """move(tuple or list vec3) -> None
         moves the Listener by vec3 (dx, dy, dz).
         default position is vec3( 0, 0, 0 )"""
         try:
-            self.position += vec3
+            self.position = tuple_add3(self.position, vec3)
             self.set(AL_POSITION, self.position)
         except:
             _err("Unsupported argument for move: {}".format(vec3))
@@ -309,8 +316,9 @@ class Listener:
         """move_to(tuple or list vec3) -> None
         moves the Listener to vec3 (x,y,z).
         default is vec3( 0, 0, 0 )"""
+        assert len(vec3) == 3, "Argument has to be of length 3"
         try:
-            self.position = numpy.array(vec3, dtype=ctypes.c_float)
+            self.position = tuple(vec3)
             self.set(AL_POSITION, self.position)
         except:
             _err("Unsupported argument for move_to: {}".format(vec3))
@@ -319,8 +327,9 @@ class Listener:
         """set_position(tuple or list vec3) -> None
         moves the Listener to vec3 (x,y,z).
         default is vec3( 0, 0, 0 )"""
+        assert len(vec3) == 3, "Argument has to be of length 3"
         try:
-            self.position = numpy.array(vec3, dtype=ctypes.c_float)
+            self.position = tuple(vec3)
             self.set(AL_POSITION, self.position)
         except:
             _err("Unsupported argument for set_position: {}".format(vec3))
@@ -330,8 +339,9 @@ class Listener:
         sets the Listener's orientation to vec6.
         (frontX, frontY, frontZ, upX, upY, upZ)
         default is vec6( 0, 0, -1, 0, 1, 0 )"""
+        assert len(vec6) == 6, "Argument has to be of length 6"
         try:
-            self.orientation = numpy.array(vec6, dtype=ctypes.c_float)
+            self.orientation = tuple(vec6)
             self.set(AL_ORIENTATION, self.orientation)
         except:
             _err("Unsupported argument for set_orientation: {}".format(vec6))
@@ -340,8 +350,9 @@ class Listener:
         """set_velocity(tuple or list vec3)
         sets the velocity of the Listener to vec3.
         default is vec3( 0, 0, 0 )"""
+        assert len(vec3) == 3, "Argument has to be of length 3"
         try:
-            self.velocity = numpy.array(vec3, dtype=ctypes.c_float)
+            self.velocity = tuple(vec3)
             self.set(AL_VELOCITY, self.velocity)
         except:
             _err("Unsupported argument for set_velocity: {}".format(vec3))
@@ -384,12 +395,15 @@ def _channels_to_al(ch):
 
 class Buffer:
     def __init__(self, *args):
+        global _buffers
         _check()
         self._exitsts = True
         self.id = ctypes.c_uint()
         alGenBuffers(1, ctypes.pointer(self.id))
 
         self.fill(*args)
+
+        _buffers.append(self)
 
     def _geti(self):
         return ctypes.c_int(self.id.value)
@@ -398,9 +412,11 @@ class Buffer:
         return self.id
 
     def destroy(self):
+        global _buffers
         if self._exitsts:
             alDeleteBuffers(1, ctypes.pointer(self.id))
             self._exitsts = False
+            _buffers.remove(self)
 
     def fill(self, *args):
         if len(args) == 1:
@@ -411,6 +427,7 @@ class Buffer:
 
 class StreamBuffer:
     def __init__(self, stream, count):
+        global _buffers
         self.buffer_ids = (ctypes.c_uint * count)()
 
         alGenBuffers(count, ctypes.cast(ctypes.pointer(self.buffer_ids), ctypes.POINTER(ctypes.c_uint)))
@@ -433,10 +450,14 @@ class StreamBuffer:
 
         self.last_buffer = self.count - 1
 
+        _buffers.append(self)
+
     def destroy(self):
+        global _buffers
         if self._exitsts:
             alDeleteBuffers(self.count, ctypes.cast(ctypes.pointer(self.buffer_ids), ctypes.POINTER(ctypes.c_uint)))
             self._exitsts = False
+            _buffers.remove(self)
 
     def fill_buffer(self, id_):
         if self._exitsts:
@@ -450,13 +471,15 @@ class StreamBuffer:
                 return False
 
 class Source:
-    def __init__(self, buffer_ = None):
-        global _items
+    def __init__(self, buffer_ = None, destroy_buffer = False):
+        global _sources
         _check()
         self.id = ctypes.c_uint()
         alGenSources(1, ctypes.pointer(self.id))
 
         self._exitsts = True
+
+        self.destroy_buffer = destroy_buffer
 
         self.pitch = 1.
 
@@ -478,13 +501,13 @@ class Source:
 
         self.cone_outer_angle = 360.
 
-        self.position = numpy.array((0.,0.,0.),dtype=ctypes.c_float)
+        self.position = (0.,0.,0.)
 
-        self.velocity = numpy.array((0.,0.,0.),dtype=ctypes.c_float)
+        self.velocity = (0.,0.,0.)
 
         self.looping = False
 
-        self.direction = numpy.array((0.,0.,0.),dtype=ctypes.c_float)
+        self.direction = (0.,0.,0.)
 
         self.source_relative = False
 
@@ -495,7 +518,7 @@ class Source:
         if buffer_:
             self._set_buffer(buffer_)
 
-        _items.append(self)
+        _sources.append(self)
 
     def get(self, enum):
         """get(int enum) -> value
@@ -544,28 +567,32 @@ class Source:
             alSourcef(self.id, ctypes.c_int(enum), ctypes.c_float(value))
         elif type(value) in (int, bool):
             alSourcei(self.id, ctypes.c_int(enum), ctypes.c_int(value))
-        elif type(value) == numpy.ndarray:
-            alSourcefv(self.id, ctypes.c_int(enum), (ctypes.c_float*len(value))(*value))
         elif type(value) in (ctypes.c_float*3, ctypes.c_float*6):
             alSourcefv(self.id,ctypes.c_int(enum), value)
-        elif type(value) in (tuple, list):
-            if len(value) == 3:
-                alSourcefv(self.id, ctypes.c_int(enum), (ctypes.c_float*3)(*numpy.array(value, dtype=ctypes.c_float)))
-            elif len(value) == 6:
-                alSourcefv(self.id, ctypes.c_int(enum), (ctypes.c_float*6)(*numpy.array(value, dtype=ctypes.c_float)))
-
+        else:
+            try:
+                value = tuple(value)
+                if len(value) == 3:
+                    alSourcefv(self.id, ctypes.c_int(enum), (ctypes.c_float*3)(*value))
+                elif len(value) == 6:
+                    alSourcefv(self.id, ctypes.c_int(enum), (ctypes.c_float*6)(*value))
+            except: pass
+            
     def destroy(self):
+        global _sources
         """destroy() -> None
-        deletes the buffers and sources.
+        deletes the sources.
         (this is called by oalQuit() automatically)"""
         if self.get_state() == AL_PLAYING:
             self.stop()
-        try:
-            self.buffer.destroy()
-        except:
-            pass
+        if self.destroy_buffer:
+            try:
+                self.buffer.destroy()
+            except:
+                pass
         if self._exitsts:
             alDeleteSources(1, ctypes.pointer(self.id))
+            _sources.remove(self)
             self._exitsts = False
 
     def set_pitch(self, value):
@@ -724,12 +751,14 @@ class Source:
 
 class SourceStream(Source):
     def __init__(self, stream):
-        global _items
+        global _sources
         _check()
         self.id = ctypes.c_uint()
         alGenSources(1, ctypes.pointer(self.id))
 
         self._exitsts = True
+
+        self.destroy_buffer = True
 
         self.pitch = 1.
 
@@ -751,13 +780,13 @@ class SourceStream(Source):
 
         self.cone_outer_angle = 360.
 
-        self.position = numpy.array((0.,0.,0.),dtype=ctypes.c_float)
+        self.position = (0.,0.,0.)
 
-        self.velocity = numpy.array((0.,0.,0.),dtype=ctypes.c_float)
+        self.velocity = (0.,0.,0.)
 
         self.looping = False
 
-        self.direction = numpy.array((0.,0.,0.),dtype=ctypes.c_float)
+        self.direction = (0.,0.,0.)
 
         self.source_relative = False
 
@@ -768,6 +797,8 @@ class SourceStream(Source):
         self._continue = True
 
         alSourceQueueBuffers(self.id, self.buffer.count, self.buffer.buffer_ids)
+
+        _sources.append(self)
 
     def get_state(self):
         """get_state() -> int
@@ -839,15 +870,17 @@ def oalQuit():
     """oalQuit() -> None
     destroys all sources and buffers and closes the
     PyOpenAL context and device."""
-    global _oaldevice, _oalcontext, _items
-    for item in _items:
-        item.destroy()
+    global _oaldevice, _oalcontext, _sources, _buffers
+    for source in _sources:
+        source.destroy()
+    for buffer in _buffers:
+        buffer.destroy()
     if _oalcontext:
         alcDestroyContext(_oalcontext)
     if _oaldevice:
         alcCloseDevice(_oaldevice)
     _oalcontext = _oaldevice = None
-    _items = []
+    _sources = []
 
 if PYOGG_AVAIL or WAVE_AVAIL:
     def oalOpen(path, ext_hint=None):
@@ -884,7 +917,7 @@ if PYOGG_AVAIL or WAVE_AVAIL:
             
         buffer_ = Buffer(file_)
 
-        source = Source(buffer_)
+        source = Source(buffer_, True)
 
         return source
 
